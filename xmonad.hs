@@ -17,6 +17,9 @@ import XMonad.Hooks.DynamicLog
 
 import XMonad.Hooks.EwmhDesktops
 
+import XMonad.Layout
+import XMonad.Layout.NoBorders (smartBorders)
+
 centerRect = W.RationalRect 0.25 0.25 0.5 0.5
 
 doIfFocusedIsFloating a b = withFocused $ \focusedId -> do
@@ -28,7 +31,10 @@ centerFloat window = windows $ W.float window centerRect
 
 toggleFocusedFloat = doIfFocusedIsFloating (withFocused $ windows . W.sink) (withFocused centerFloat)
 
-myLayout = avoidStruts $ Tall 1 (3/100) (1/2)
+myLayout = avoidStruts (smartBorders $ 
+        Tall 1 (3/100) (1/2)
+    ||| Full
+    )
 
 -- needed for xmobar
 barPrettyPrinter :: PP
@@ -59,4 +65,5 @@ main = do
 		, ("M-S-r", spawn "xmonad --recompile; xmonad --restart")
 		, ("M-S-e", spawn "kill -9 -1")
 		, ("M-<Space>", toggleFocusedFloat)
+		, ("M-S-f", sendMessage NextLayout)
 		]
