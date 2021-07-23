@@ -20,6 +20,9 @@ import XMonad.Hooks.EwmhDesktops
 import XMonad.Layout
 import XMonad.Layout.NoBorders (smartBorders)
 
+import Data.List
+import Data.Maybe
+
 centerRect = W.RationalRect 0.25 0.25 0.5 0.5
 
 doIfFocusedIsFloating a b = withFocused $ \focusedId -> do
@@ -36,6 +39,16 @@ myLayout = avoidStruts (smartBorders $
     ||| Full
     )
 
+processWorkspaces :: String -> String
+processWorkspaces workspaces =
+    concat $ intersperse " " mapped
+        where currentWorkspace = read (take 1 $ drop 13 workspaces) :: Int
+              otherWorkspaces = map read $ words $ takeWhile (/='>') $ drop 21 workspaces :: [Int]
+              allWorkspaces = sort $ currentWorkspace : otherWorkspaces
+              mapped = map (\w -> if w == currentWorkspace 
+                                     then wrap "[" "]" (show w) 
+                                     else (show w)) allWorkspaces
+
 -- needed for xmobar
 barPrettyPrinter :: PP
 barPrettyPrinter = 
@@ -44,7 +57,8 @@ barPrettyPrinter =
                  , ppVisible = wrap "(" ")"
                  , ppUrgent  = xmobarColor "red" "yellow"
                  , ppSort = getSortByXineramaPhysicalRule def
-		 , ppOrder = \(workspaces:layout:title) -> workspaces : title
+		 , ppOrder = 
+                     \(workspaces:layout:title) -> (wrap " " "" $ processWorkspaces workspaces) : title
                  }
 
 main :: IO ()
