@@ -31,22 +31,24 @@ toggleFocusedFloat = doIfFocusedIsFloating (withFocused $ windows . W.sink) (wit
 myLayout = avoidStruts $ Tall 1 (3/100) (1/2)
 
 -- needed for xmobar
-myPP :: PP
-myPP = def { ppCurrent = xmobarColor "#1ABC9C" "" . wrap "[" "]"
-           , ppTitle = xmobarColor "#1ABC9C" "" . shorten 60
-           , ppVisible = wrap "(" ")"
-           , ppUrgent  = xmobarColor "red" "yellow"
-           , ppSort = getSortByXineramaPhysicalRule def
-           }
+barPrettyPrinter :: PP
+barPrettyPrinter = 
+	xmobarPP { ppCurrent = xmobarColor "#ffffff" "" . wrap "[" "]"
+                 , ppTitle = xmobarColor "#ffffff" "" . shorten 60
+                 , ppVisible = wrap "(" ")"
+                 , ppUrgent  = xmobarColor "red" "yellow"
+                 , ppSort = getSortByXineramaPhysicalRule def
+		 , ppOrder = \(workspaces:layout:title) -> workspaces : title
+                 }
 
 main :: IO ()
 main = do 
-	xmproc <- spawnPipe "xmobar"
+	barproc <- spawnPipe "xmobar"
 	xmonad $ docks $ ewmh $ def
 		{ modMask = mod4Mask 
 		, manageHook = insertPosition End Newer 
 		, layoutHook = myLayout
-		, logHook = dynamicLogWithPP myPP { ppOutput = hPutStrLn xmproc } 
+		, logHook = dynamicLogWithPP barPrettyPrinter { ppOutput = hPutStrLn barproc }
 		}
 		`additionalKeysP`
 		[ ("M-<Return>", spawn "alacritty") 
