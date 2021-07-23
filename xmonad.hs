@@ -39,15 +39,17 @@ myLayout = avoidStruts (smartBorders $
     ||| Full
     )
 
+-- sorts the workspaces and adds [] around the currently selected one
 processWorkspaces :: String -> String
 processWorkspaces workspaces =
-    concat $ intersperse " " mapped
+    concat $ intersperse " " $ map processWorkspace allWorkspaces
         where currentWorkspace = read (take 1 $ drop 13 workspaces) :: Int
               otherWorkspaces = map read $ words $ takeWhile (/='>') $ drop 21 workspaces :: [Int]
               allWorkspaces = sort $ currentWorkspace : otherWorkspaces
-              mapped = map (\w -> if w == currentWorkspace 
-                                     then wrap "[" "]" (show w) 
-                                     else (show w)) allWorkspaces
+              formatCurrent = (xmobarColor "#FFFFFF" "#000000" . wrap "[" "]")
+              processWorkspace w = if w == currentWorkspace 
+                                       then formatCurrent (show w) 
+                                       else (show w)
 
 -- needed for xmobar
 barPrettyPrinter :: PP
@@ -73,11 +75,12 @@ main = do
 		`additionalKeysP`
 		[ ("M-<Return>", spawn "alacritty") 
 		, ("M-f", spawn "~/projects/rofi_scripts/browser_launch.dash")
+		, ("M-S-f", spawn "firefox --new-window")
 		, ("M-a", spawn "~/projects/rofi_scripts/actions.dash")
 		, ("M-d", spawn "rofi -show drun")
 		, ("M-S-q", kill)
 		, ("M-S-r", spawn "xmonad --recompile; xmonad --restart")
 		, ("M-S-e", spawn "kill -9 -1")
 		, ("M-<Space>", toggleFocusedFloat)
-		, ("M-S-f", sendMessage NextLayout)
+		, ("M-S-<Space>", sendMessage NextLayout)
 		]
