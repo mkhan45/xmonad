@@ -6,8 +6,8 @@ Config {  font = "xft:DejaVu Sans Mono:size=17"
         , position = TopW L 100
         , commands = [ Run Cpu ["-t", "CPU: <total>%", "3","-H","50","--normal","green","--high","red"] 20
                      , Run Memory ["-t","MEM: <usedratio>%"] 20
-                     , Run Date "%a %b %_d %H:%M" "date" 60
-                     , Run BatteryP ["BAT0"] ["-t", "<watts>W <left>%"] 60
+                     , Run Date "%a %b %_d %H:%M" "date" 500
+                     , Run BatteryP ["BAT0"] ["-t", "<watts>W <left>%"] 200
                      , Run StdinReader
                      ]
         , sepChar = "%"

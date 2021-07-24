@@ -95,4 +95,6 @@ main = do
 		, ("M-S-<Space>", sendMessage NextLayout)
 		, ("M-S-a", spawn "i3lock -i ~/Pictures/rocket.png")
 		, ("M-s", scratchpadSpawnActionCustom "alacritty --class scratchpad")
+		, ("<XF86MonBrightnessUp>", spawn "brightnessctl s +5%")
+		, ("<XF86MonBrightnessDown>", spawn "brightnessctl s 5%-")
 		]
