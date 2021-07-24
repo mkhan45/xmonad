@@ -7,10 +7,11 @@ Config {  font = "xft:DejaVu Sans Mono:size=17"
         , commands = [ Run Cpu ["-t", "CPU: <total>%", "3","-H","50","--normal","green","--high","red"] 20
                      , Run Memory ["-t","MEM: <usedratio>%"] 20
                      , Run Date "%a %b %_d %H:%M" "date" 60
-                     , Run UnsafeStdinReader
+                     , Run BatteryP ["BAT0"] ["-t", "<watts>W <left>%"] 60
+                     , Run StdinReader
                      ]
         , sepChar = "%"
         , alignSep = "}{"
-        , template = "%UnsafeStdinReader% }{<fc=grey>%cpu% | %memory% | %date%</fc>"
+        , template = "%StdinReader% }{<fc=grey> %battery% | %cpu% | %memory% | %date%</fc>"
         }
 

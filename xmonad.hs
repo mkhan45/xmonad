@@ -23,6 +23,8 @@ import XMonad.Layout.NoBorders (smartBorders)
 import Data.List
 import Data.Maybe
 
+import XMonad.Util.Scratchpad
+
 centerRect = W.RationalRect 0.25 0.25 0.5 0.5
 
 doIfFocusedIsFloating a b = withFocused $ \focusedId -> do
@@ -63,14 +65,22 @@ barPrettyPrinter =
                      \(workspaces:layout:title) -> (wrap " " "" $ processWorkspaces workspaces) : title
                  }
 
+scratchPadHook = scratchpadManageHook $ W.RationalRect scLeft scTop scWidth scHeight
+    where scWidth = 0.6
+          scHeight = 0.5
+          scTop = (1.0 - scHeight) / 2.0
+          scLeft = (1.0 - scWidth) / 2.0
+
 main :: IO ()
 main = do 
 	barproc <- spawnPipe "xmobar"
 	xmonad $ docks $ ewmh $ def
 		{ modMask = mod4Mask 
-		, manageHook = insertPosition End Newer 
+		, manageHook = (insertPosition End Newer) <+> scratchPadHook
 		, layoutHook = myLayout
 		, logHook = dynamicLogWithPP barPrettyPrinter { ppOutput = hPutStrLn barproc }
+                , handleEventHook = handleEventHook def <+> fullscreenEventHook
+                , terminal = "alacritty"
 		}
 		`additionalKeysP`
 		[ ("M-<Return>", spawn "alacritty") 
@@ -83,4 +93,6 @@ main = do
 		, ("M-S-e", spawn "kill -9 -1")
 		, ("M-<Space>", toggleFocusedFloat)
 		, ("M-S-<Space>", sendMessage NextLayout)
+		, ("M-S-a", spawn "i3lock -i ~/Pictures/rocket.png")
+		, ("M-s", scratchpadSpawnActionCustom "alacritty --class scratchpad")
 		]
