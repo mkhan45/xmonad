@@ -46,7 +46,8 @@ processWorkspaces :: String -> String
 processWorkspaces workspaces =
     concat $ intersperse " " $ map processWorkspace allWorkspaces
         where currentWorkspace = read (take 1 $ drop 13 workspaces) :: Int
-              otherWorkspaces = map read $ words $ takeWhile (/='>') $ drop 21 workspaces :: [Int]
+              otherWorkspaces 
+                = map read $ filter (/="NSP") $ words $ takeWhile (/='>') $ drop 21 workspaces :: [Int]
               allWorkspaces = sort $ currentWorkspace : otherWorkspaces
               formatCurrent = (xmobarColor "#FFFFFF" "#000000" . wrap "[" "]")
               processWorkspace w = if w == currentWorkspace 
