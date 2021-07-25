@@ -7,11 +7,11 @@ Config {  font = "xft:DejaVu Sans Mono:size=17"
         , commands = [ Run Cpu ["-t", "CPU: <total>%", "3","-H","50","--normal","green","--high","red"] 20
                      , Run Memory ["-t","MEM: <usedratio>%"] 20
                      , Run Date "%a %b %_d %H:%M" "date" 500
-                     , Run BatteryP ["BAT0"] ["-t", "<watts>W <left>%"] 200
+                     , Run BatteryP ["BAT0"] ["-t", "<watts>W <left>%"] 60
+                     , Run Com "/bin/sh" ["-c", "~/.xmonad/get_volume.sh"] "vol" 10
                      , Run StdinReader
                      ]
         , sepChar = "%"
         , alignSep = "}{"
-        , template = "%StdinReader% }{<fc=grey> %battery% | %cpu% | %memory% | %date%</fc>"
+        , template = "%StdinReader% }{<fc=grey> %battery% | VOL: %vol% | %cpu% | %memory% | %date%</fc>"
         }
-

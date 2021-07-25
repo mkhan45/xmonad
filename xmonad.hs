@@ -105,4 +105,7 @@ main = do
 		, ("M-c", namedScratchpadAction scratchpads "julia")
 		, ("<XF86MonBrightnessUp>", spawn "brightnessctl s +5%")
 		, ("<XF86MonBrightnessDown>", spawn "brightnessctl s 5%-")
+		, ("<XF86AudioLowerVolume>", spawn "amixer -D pulse sset Master 1%-")
+		, ("<XF86AudioRaiseVolume>", spawn "amixer -D pulse sset Master 1%+")
+		, ("<XF86AudioMute>", spawn "amixer -D pulse sset 0%")
 		]
