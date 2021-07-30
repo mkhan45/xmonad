@@ -14,6 +14,7 @@ import XMonad.Util.Run
 import XMonad.Util.WorkspaceCompare
 import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.DynamicLog
+import XMonad.Hooks.ManageHelpers
 
 import XMonad.Hooks.EwmhDesktops
 
@@ -24,6 +25,11 @@ import Data.List
 import Data.Maybe
 
 import XMonad.Util.NamedScratchpad
+
+import GHC.IO.Handle (hGetLine)
+import Control.Monad.IO.Class (liftIO)
+
+import System.IO
 
 centerRect = W.RationalRect 0.25 0.25 0.5 0.5
 
@@ -67,8 +73,8 @@ barPrettyPrinter =
                  }
 
 scratchpadRect = W.RationalRect scLeft scTop scWidth scHeight
-    where scWidth = 0.6
-          scHeight = 0.5
+    where scWidth = 0.75
+          scHeight = 0.75
           scTop = (1.0 - scHeight) / 2.0
           scLeft = (1.0 - scWidth) / 2.0
 
@@ -76,14 +82,28 @@ scratchpadFloat = customFloating scratchpadRect
 
 scratchpads = [ NS "term" "alacritty --title scratchpad" (title =? "scratchpad") scratchpadFloat
               , NS "julia" "alacritty --title julia -e 'julia'" (title =? "julia") scratchpadFloat
+              , NS "cmus" "alacritty --title cmus -e 'cmus'" (title =? "cmus") scratchpadFloat
               ]
+
+scratchpadLauncher :: X ()
+scratchpadLauncher = do
+    result <- runProcessWithInput "rofi" ["-dmenu"] (intercalate "\n" ["julia", "cmus"])
+    namedScratchpadAction scratchpads (take (length result - 1) result)
+
+myAppendFile :: FilePath -> String -> IO ()
+myAppendFile f s = do
+  withFile f AppendMode $ \h -> do
+    hPutStrLn h s
+
+logToTmpFile :: String -> IO ()
+logToTmpFile = myAppendFile "/home/mk/xmonad.log" . (++ "\n")
 
 main :: IO ()
 main = do 
 	barproc <- spawnPipe "xmobar"
 	xmonad $ docks $ ewmh $ def
 		{ modMask = mod4Mask 
-		, manageHook = (insertPosition End Newer) <+> (namedScratchpadManageHook scratchpads)
+		, manageHook = (insertPosition End Newer) <+> (namedScratchpadManageHook scratchpads) <+> (fmap ("mpv" `isPrefixOf`) title --> doFullFloat)
 		, layoutHook = myLayout
 		, logHook = dynamicLogWithPP barPrettyPrinter { ppOutput = hPutStrLn barproc }
                 , handleEventHook = handleEventHook def <+> fullscreenEventHook
@@ -103,6 +123,8 @@ main = do
 		, ("M-S-a", spawn "i3lock -i ~/Pictures/rocket.png")
 		, ("M-s", namedScratchpadAction scratchpads "term")
 		, ("M-c", namedScratchpadAction scratchpads "julia")
+		, ("M-m", namedScratchpadAction scratchpads "cmus")
+		, ("M-g", scratchpadLauncher)
 		, ("<XF86MonBrightnessUp>", spawn "brightnessctl s +5%")
 		, ("<XF86MonBrightnessDown>", spawn "brightnessctl s 5%-")
 		, ("<XF86AudioLowerVolume>", spawn "amixer -D pulse sset Master 1%-")
