@@ -80,15 +80,24 @@ scratchpadRect = W.RationalRect scLeft scTop scWidth scHeight
 
 scratchpadFloat = customFloating scratchpadRect
 
+pulsemixerScratchpad = 
+    NS "pulsemixer" "alacritty --title pulsemixer -e 'pulsemixer'" (title =? "pulsemixer") scratchpadFloat
+
+
 scratchpads = [ NS "term" "alacritty --title scratchpad" (title =? "scratchpad") scratchpadFloat
               , NS "julia" "alacritty --title julia -e 'julia'" (title =? "julia") scratchpadFloat
               , NS "cmus" "alacritty --title cmus -e 'cmus'" (title =? "cmus") scratchpadFloat
+              , NS "term1" "alacritty --title misc1" (title =? "misc1") scratchpadFloat
+              , NS "term2" "alacritty --title misc2" (title =? "misc2") scratchpadFloat
+              , NS "term3" "alacritty --title misc3" (title =? "misc3") scratchpadFloat
+              , pulsemixerScratchpad
               ]
 
 scratchpadLauncher :: X ()
 scratchpadLauncher = do
-    result <- runProcessWithInput "rofi" ["-dmenu"] (intercalate "\n" ["julia", "cmus"])
+    result <- runProcessWithInput "rofi" ["-dmenu"] (intercalate "\n" options)
     namedScratchpadAction scratchpads (take (length result - 1) result)
+        where options = ["julia", "cmus", "pulsemixer", "term1"]
 
 myAppendFile :: FilePath -> String -> IO ()
 myAppendFile f s = do
@@ -130,4 +139,7 @@ main = do
 		, ("<XF86AudioLowerVolume>", spawn "amixer -D pulse sset Master 1%-")
 		, ("<XF86AudioRaiseVolume>", spawn "amixer -D pulse sset Master 1%+")
 		, ("<XF86AudioMute>", spawn "amixer -D pulse sset 0%")
+		, ("M-[", namedScratchpadAction scratchpads "term1")
+		, ("M-]", namedScratchpadAction scratchpads "term2")
+		, ("M-\\", namedScratchpadAction scratchpads "term3")
 		]
