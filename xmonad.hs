@@ -18,6 +18,8 @@ import XMonad.Hooks.ManageHelpers
 
 import XMonad.Hooks.EwmhDesktops
 
+import XMonad.Actions.UpdateFocus
+
 import XMonad.Layout
 import XMonad.Layout.NoBorders (smartBorders)
 
@@ -112,10 +114,14 @@ main = do
 	barproc <- spawnPipe "xmobar"
 	xmonad $ docks $ ewmh $ def
 		{ modMask = mod4Mask 
-		, manageHook = (insertPosition End Newer) <+> (namedScratchpadManageHook scratchpads) <+> (fmap ("mpv" `isPrefixOf`) title --> doFullFloat)
+                , startupHook = adjustEventInput
+		, manageHook = 
+                    (insertPosition End Newer) 
+                    <+> (namedScratchpadManageHook scratchpads) 
+                    <+> (fmap ("mpv" `isPrefixOf`) title --> doFullFloat)
 		, layoutHook = myLayout
 		, logHook = dynamicLogWithPP barPrettyPrinter { ppOutput = hPutStrLn barproc }
-                , handleEventHook = handleEventHook def <+> fullscreenEventHook
+                , handleEventHook = handleEventHook def <+> fullscreenEventHook <+> focusOnMouseMove
                 , terminal = "alacritty"
 		}
 		`additionalKeysP`
