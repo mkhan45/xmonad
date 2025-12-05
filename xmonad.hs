@@ -1,27 +1,32 @@
 import XMonad
 
 import XMonad.Util.EZConfig
-import XMonad.Util.Ungrab
 
 import XMonad.Util.EZConfig (additionalKeysP)
 
 import XMonad.Hooks.InsertPosition
+
+import XMonad.Layout.IndependentScreens
+import XMonad.Layout.PerScreen (ifWider)
 
 import qualified Data.Map as M
 import qualified XMonad.StackSet as W
 
 import XMonad.Util.Run
 import XMonad.Util.WorkspaceCompare
-import XMonad.Hooks.ManageDocks
-import XMonad.Hooks.DynamicLog
+
 import XMonad.Hooks.ManageHelpers
 
 import XMonad.Hooks.EwmhDesktops
 
 import XMonad.Actions.UpdateFocus
+import qualified XMonad.Actions.CycleWS as C
 
 import XMonad.Layout
-import XMonad.Layout.NoBorders (smartBorders)
+import XMonad.Layout.NoBorders (smartBorders, lessBorders, Ambiguity(..))
+import XMonad.Layout.ResizableTile
+import XMonad.Layout.Tabbed
+import XMonad.Layout.LayoutModifier
 
 import Data.List
 import Data.Maybe
@@ -32,6 +37,14 @@ import GHC.IO.Handle (hGetLine)
 import Control.Monad.IO.Class (liftIO)
 
 import System.IO
+
+-- new xmobar
+import XMonad.Hooks.StatusBar
+import XMonad.Hooks.StatusBar.PP
+
+-- old xmobar
+import XMonad.Hooks.ManageDocks
+-- import XMonad.Hooks.DynamicLog
 
 centerRect = W.RationalRect 0.25 0.25 0.5 0.5
 
@@ -44,10 +57,11 @@ centerFloat window = windows $ W.float window centerRect
 
 toggleFocusedFloat = doIfFocusedIsFloating (withFocused $ windows . W.sink) (withFocused centerFloat)
 
-myLayout = avoidStruts (smartBorders $ 
-        Tall 1 (3/100) (1/2)
-    ||| Full
-    )
+tallLayout = ifWider 1440 (ResizableTall 1 (3/100) (1/2) []) (Mirror $ ResizableTall 1 (3/100) (1/2) [])
+
+myLayout = 
+    avoidStruts (lessBorders Screen $ 
+            (addTabs shrinkText def tallLayout) ||| (addTabs shrinkText def Full))
 
 -- sorts the workspaces and adds [] around the currently selected one
 processWorkspaces :: String -> String
@@ -109,10 +123,21 @@ myAppendFile f s = do
 logToTmpFile :: String -> IO ()
 logToTmpFile = myAppendFile "/home/mk/xmonad.log" . (++ "\n")
 
+screenWorkspaces = withScreens 2 $ map show [1..9]
+
+xmobar1 = statusBarPropTo "_XMONAD_LOG_1" "xmobar -x 0 ~/.xmobarrc" (pure (marshallPP (S 0) barPrettyPrinter))
+xmobar2 = statusBarPropTo "_XMONAD_LOG_2" "xmobar -x 1 ~/.xmobarrc1" (pure (marshallPP (S 1) barPrettyPrinter))
+
+myKeys :: XConfig l -> M.Map (KeyMask, KeySym) (X ())
+myKeys conf = let modm = modMask conf in M.fromList $
+    [((m .|. modm, k), windows $ onCurrentScreen f i)
+    | (i, k) <- zip (workspaces' conf) [xK_1 .. xK_9]
+    , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]
+    ]
+
 main :: IO ()
 main = do 
-	barproc <- spawnPipe "xmobar"
-	xmonad $ docks $ ewmh $ def
+	xmonad $ docks $ withSB (xmobar1 <> xmobar2) $ ewmhFullscreen $ ewmh $ def
 		{ modMask = mod4Mask 
                 , startupHook = adjustEventInput
 		, manageHook = 
@@ -120,9 +145,11 @@ main = do
                     <+> (namedScratchpadManageHook scratchpads) 
                     <+> (fmap ("mpv" `isPrefixOf`) title --> doFullFloat)
 		, layoutHook = myLayout
-		, logHook = dynamicLogWithPP barPrettyPrinter { ppOutput = hPutStrLn barproc }
-                , handleEventHook = handleEventHook def <+> fullscreenEventHook <+> focusOnMouseMove
+		-- , logHook = dynamicLogWithPP barPrettyPrinter { ppOutput = hPutStrLn barproc }
+                , handleEventHook = handleEventHook def <+> focusOnMouseMove
                 , terminal = "alacritty"
+                , workspaces = screenWorkspaces
+                , keys = myKeys
 		}
 		`additionalKeysP`
 		[ ("M-<Return>", spawn "alacritty") 
@@ -146,8 +173,21 @@ main = do
 		, ("<XF86AudioLowerVolume>", spawn "/home/mk/projects/rofi_scripts/volumedown.dash")
 		, ("<XF86AudioRaiseVolume>", spawn "/home/mk/projects/rofi_scripts/volumeup.dash")
 		, ("<XF86AudioMute>", spawn "amixer -D pulse sset 0%")
-		, ("M-p", namedScratchpadAction scratchpads "term1")
+		-- , ("M-p", namedScratchpadAction scratchpads "term1")
 		, ("M-[", namedScratchpadAction scratchpads "term1")
 		, ("M-]", namedScratchpadAction scratchpads "term2")
 		, ("M-\\", namedScratchpadAction scratchpads "term3")
+                , ("M-j", windows $ W.focusUp)
+                , ("M-k", windows $ W.focusDown)
+                , ("M-S-j", windows $ W.swapUp)
+                , ("M-S-k", windows $ W.swapDown)
+                , ("M-h", sendMessage Shrink)
+                , ("M-l", sendMessage Expand)
+                , ("M-S-h", sendMessage MirrorShrink)
+                , ("M-S-l", sendMessage MirrorExpand)
+                , ("M-S-k", windows $ W.swapDown)
+                , ("M-n", C.nextScreen)
+                , ("M-S-n", C.shiftNextScreen)
+                , ("M-p", C.nextScreen)
+		, ("M-S-p", C.shiftNextScreen)
 		]
