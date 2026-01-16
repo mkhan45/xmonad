@@ -123,10 +123,9 @@ myAppendFile f s = do
 logToTmpFile :: String -> IO ()
 logToTmpFile = myAppendFile "/home/mk/xmonad.log" . (++ "\n")
 
-screenWorkspaces = withScreens 2 $ map show [1..9]
+screenWorkspaces = withScreens 1 $ map show [1..9]
 
-xmobar1 = statusBarPropTo "_XMONAD_LOG_1" "xmobar -x 0 ~/.xmobarrc" (pure (marshallPP (S 0) barPrettyPrinter))
-xmobar2 = statusBarPropTo "_XMONAD_LOG_2" "xmobar -x 1 ~/.xmobarrc1" (pure (marshallPP (S 1) barPrettyPrinter))
+xmobar1 = statusBarPropTo "_XMONAD_LOG_1" "xmobar -x 0 ~/.config/xmonad/xmobarrc" (pure (marshallPP (S 0) barPrettyPrinter))
 
 myKeys :: XConfig l -> M.Map (KeyMask, KeySym) (X ())
 myKeys conf = let modm = modMask conf in M.fromList $
@@ -137,7 +136,7 @@ myKeys conf = let modm = modMask conf in M.fromList $
 
 main :: IO ()
 main = do 
-	xmonad $ docks $ withSB (xmobar1 <> xmobar2) $ ewmhFullscreen $ ewmh $ def
+	xmonad $ docks $ withSB xmobar1 $ ewmhFullscreen $ ewmh $ def
 		{ modMask = mod4Mask 
                 , startupHook = adjustEventInput
 		, manageHook = 
@@ -153,14 +152,14 @@ main = do
 		}
 		`additionalKeysP`
 		[ ("M-<Return>", spawn "alacritty") 
-		, ("M-f", spawn "~/projects/rofi_scripts/browser_launch.dash")
+		, ("M-f", spawn "~/repos/rofi_scripts/browser_launch.dash")
 		, ("M-S-f", spawn "firefox --new-window")
 		, ("M-C-f", spawn "firefox --new-window")
-		, ("M-a", spawn "~/projects/rofi_scripts/actions.dash")
+		, ("M-a", spawn "~/repos/rofi_scripts/actions.dash")
 		, ("M-d", spawn "rofi -show drun")
 		, ("M-S-q", kill)
 		, ("M-S-r", spawn "xmonad --recompile; xmonad --restart")
-		, ("M-S-e", spawn "kill -9 -1")
+		, ("M-S-e", spawn "pkill xmonad")
 		, ("M-<Space>", toggleFocusedFloat)
 		, ("M-S-<Space>", sendMessage NextLayout)
 		, ("M-S-a", spawn "i3lock -i ~/Pictures/rocket.png")
@@ -170,8 +169,8 @@ main = do
 		, ("M-g", scratchpadLauncher)
 		, ("<XF86MonBrightnessUp>", spawn "brightnessctl s +5%")
 		, ("<XF86MonBrightnessDown>", spawn "brightnessctl s 5%-")
-		, ("<XF86AudioLowerVolume>", spawn "/home/mk/projects/rofi_scripts/volumedown.dash")
-		, ("<XF86AudioRaiseVolume>", spawn "/home/mk/projects/rofi_scripts/volumeup.dash")
+		, ("<XF86AudioLowerVolume>", spawn "/home/mk/repos/rofi_scripts/volumedown.dash")
+		, ("<XF86AudioRaiseVolume>", spawn "/home/mk/repos/rofi_scripts/volumeup.dash")
 		, ("<XF86AudioMute>", spawn "amixer -D pulse sset 0%")
 		-- , ("M-p", namedScratchpadAction scratchpads "term1")
 		, ("M-[", namedScratchpadAction scratchpads "term1")
