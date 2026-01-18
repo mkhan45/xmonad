@@ -26,6 +26,9 @@ import XMonad.Layout
 import XMonad.Layout.NoBorders (smartBorders, lessBorders, Ambiguity(..))
 import XMonad.Layout.ResizableTile
 import XMonad.Layout.Tabbed
+import XMonad.Layout.Simplest
+import XMonad.Layout.SubLayouts
+import XMonad.Layout.WindowNavigation
 import XMonad.Layout.LayoutModifier
 
 import Data.List
@@ -61,7 +64,7 @@ tallLayout = ifWider 1440 (ResizableTall 1 (3/100) (1/2) []) (Mirror $ Resizable
 
 myLayout = 
     avoidStruts (lessBorders Screen $ 
-            (addTabs shrinkText def tallLayout) ||| (addTabs shrinkText def Full))
+            (windowNavigation $ addTabs shrinkText def $ subLayout [] Simplest $ tallLayout) ||| (addTabs shrinkText def Full))
 
 -- sorts the workspaces and adds [] around the currently selected one
 processWorkspaces :: String -> String
@@ -182,6 +185,17 @@ main = do
                 , ("M-S-k", windows $ W.swapDown)
                 , ("M-h", sendMessage Shrink)
                 , ("M-l", sendMessage Expand)
+
+                , ("M-C-h", sendMessage $ pullGroup L)
+                , ("M-C-l", sendMessage $ pullGroup R)
+                , ("M-C-j", sendMessage $ pullGroup D)
+                , ("M-C-k", sendMessage $ pullGroup U)
+                , ("M-C-m", withFocused $ (sendMessage . MergeAll))
+                , ("M-C-u", withFocused $ (sendMessage . UnMerge))
+                , ("M-<Tab>", onGroup W.focusDown')
+
+                , ("M-S-h", sendMessage MirrorShrink)
+                , ("M-S-l", sendMessage MirrorExpand)
                 , ("M-S-h", sendMessage MirrorShrink)
                 , ("M-S-l", sendMessage MirrorExpand)
                 , ("M-S-k", windows $ W.swapDown)
