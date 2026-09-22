@@ -13,7 +13,7 @@ import qualified Data.Map as M
 import qualified XMonad.StackSet as W
 
 import XMonad.Util.Run
-import XMonad.Util.WorkspaceCompare
+import XMonad.Util.NamedWindows (getName)
 
 import XMonad.Hooks.ManageHelpers
 
@@ -26,6 +26,9 @@ import XMonad.Layout
 import XMonad.Layout.NoBorders (smartBorders, lessBorders, Ambiguity(..))
 import XMonad.Layout.ResizableTile
 import XMonad.Layout.Tabbed
+import XMonad.Layout.Simplest
+import XMonad.Layout.SubLayouts
+import XMonad.Layout.WindowNavigation
 import XMonad.Layout.LayoutModifier
 
 import Data.List
@@ -61,31 +64,30 @@ tallLayout = ifWider 1440 (ResizableTall 1 (3/100) (1/2) []) (Mirror $ Resizable
 
 myLayout = 
     avoidStruts (lessBorders Screen $ 
-            (addTabs shrinkText def tallLayout) ||| (addTabs shrinkText def Full))
+            (addTabs shrinkText def $ subLayout [] Simplest $ tallLayout) ||| (addTabs shrinkText def Full))
 
--- sorts the workspaces and adds [] around the currently selected one
-processWorkspaces :: String -> String
-processWorkspaces workspaces =
-    concat $ intersperse " " $ map processWorkspace allWorkspaces
-        where currentWorkspace = read (take 1 $ drop 13 workspaces) :: Int
-              otherWorkspaces 
-                = map read $ filter (/="NSP") $ words $ takeWhile (/='>') $ drop 21 workspaces :: [Int]
-              allWorkspaces = sort $ currentWorkspace : otherWorkspaces
-              formatCurrent = (xmobarColor "#FFFFFF" "#000000" . wrap "[" "]")
-              processWorkspace w = if w == currentWorkspace 
-                                       then formatCurrent (show w) 
-                                       else (show w)
+-- Keep each monitor's selected and occupied workspaces in number order.
+perScreenWorkspaces :: ScreenId -> WindowSet -> String
+perScreenWorkspaces screen ws = unwords $ map format shown
+    where selected = workspaceOnScreen screen ws
+          shown = filter (\w -> Just (W.tag w) == selected || isJust (W.stack w))
+                $ sortOn W.tag $ workspacesOn screen $ W.workspaces ws
+          format w = let tag = W.tag w
+                         name = unmarshallW tag
+                     in if Just tag == selected
+                        then xmobarColor "#ffffff" "#000000" (wrap "[" "]" name)
+                        else name
 
--- needed for xmobar
-barPrettyPrinter :: PP
-barPrettyPrinter = 
-	xmobarPP { ppCurrent = xmobarColor "#ffffff" "" . wrap "[" "]"
-                 , ppTitle = xmobarColor "#ffffff" "" . shorten 60
-                 , ppVisible = wrap "(" ")"
-                 , ppUrgent  = xmobarColor "red" "yellow"
-                 , ppSort = getSortByXineramaPhysicalRule def
-		 , ppOrder = 
-                     \(workspaces:layout:title) -> (wrap " " "" $ processWorkspaces workspaces) : title
+perScreenTitle :: ScreenId -> X (Maybe String)
+perScreenTitle screen = do
+    ws <- gets windowset
+    title <- traverse getName $ W.focus <$> (screenOnMonitor screen ws >>= W.stack . W.workspace)
+    pure $ Just $ maybe "" (xmobarColor "#ffffff" "" . shorten 60 . ppTitleSanitize xmobarPP . show) title
+
+barPrettyPrinter :: ScreenId -> PP
+barPrettyPrinter screen =
+	xmobarPP { ppExtras = [Just . perScreenWorkspaces screen <$> gets windowset, perScreenTitle screen]
+                 , ppOrder = \(_:_:_:workspaces:title:_) -> [wrap " " "" workspaces, title]
                  }
 
 scratchpadRect = W.RationalRect scLeft scTop scWidth scHeight
@@ -125,8 +127,8 @@ logToTmpFile = myAppendFile "/home/mk/xmonad.log" . (++ "\n")
 
 screenWorkspaces = withScreens 2 $ map show [1..9]
 
-xmobar1 = statusBarPropTo "_XMONAD_LOG_1" "xmobar -x 0 ~/.xmobarrc" (pure (marshallPP (S 0) barPrettyPrinter))
-xmobar2 = statusBarPropTo "_XMONAD_LOG_2" "xmobar -x 1 ~/.xmobarrc1" (pure (marshallPP (S 1) barPrettyPrinter))
+xmobar1 = statusBarPropTo "_XMONAD_LOG_1" "xmobar -x 0 ~/.xmobarrc" (pure (barPrettyPrinter (S 0)))
+xmobar2 = statusBarPropTo "_XMONAD_LOG_2" "xmobar -x 1 ~/.xmobarrc1" (pure (barPrettyPrinter (S 1)))
 
 myKeys :: XConfig l -> M.Map (KeyMask, KeySym) (X ())
 myKeys conf = let modm = modMask conf in M.fromList $
@@ -138,6 +140,7 @@ myKeys conf = let modm = modMask conf in M.fromList $
 main :: IO ()
 main = do 
 	xmonad $ docks $ withSB (xmobar1 <> xmobar2) $ ewmhFullscreen $ ewmh $ def
+	-- xmonad $ docks $ ewmhFullscreen $ ewmh $ def
 		{ modMask = mod4Mask 
                 , startupHook = adjustEventInput
 		, manageHook = 
@@ -154,7 +157,7 @@ main = do
 		`additionalKeysP`
 		[ ("M-<Return>", spawn "alacritty") 
 		, ("M-f", spawn "~/projects/rofi_scripts/browser_launch.dash")
-		, ("M-S-f", spawn "firefox --new-window")
+		, ("M-S-f", spawn "~/projects/rofi_scripts/firefox-launch.sh")
 		, ("M-C-f", spawn "firefox --new-window")
 		, ("M-a", spawn "~/projects/rofi_scripts/actions.dash")
 		, ("M-d", spawn "rofi -show drun")
@@ -163,7 +166,7 @@ main = do
 		, ("M-S-e", spawn "kill -9 -1")
 		, ("M-<Space>", toggleFocusedFloat)
 		, ("M-S-<Space>", sendMessage NextLayout)
-		, ("M-S-a", spawn "i3lock -i ~/Pictures/rocket.png")
+		, ("M-S-a", spawn "i3lock -i ~/.config/xmonad/rocket.png")
 		, ("M-s", namedScratchpadAction scratchpads "term")
 		, ("M-c", namedScratchpadAction scratchpads "julia")
 		, ("M-m", namedScratchpadAction scratchpads "cmus")
@@ -186,6 +189,16 @@ main = do
                 , ("M-S-h", sendMessage MirrorShrink)
                 , ("M-S-l", sendMessage MirrorExpand)
                 , ("M-S-k", windows $ W.swapDown)
+
+                -- probably dont work bc independent layouts
+                , ("M-C-h", sendMessage $ pullGroup L)
+                , ("M-C-l", sendMessage $ pullGroup R)
+                , ("M-C-j", sendMessage $ pullGroup D)
+                , ("M-C-k", sendMessage $ pullGroup U)
+                , ("M-C-m", withFocused $ (sendMessage . MergeAll))
+                , ("M-C-u", withFocused $ (sendMessage . UnMerge))
+                , ("M-<Tab>", onGroup W.focusDown')
+
                 , ("M-n", C.nextScreen)
                 , ("M-S-n", C.shiftNextScreen)
                 , ("M-p", C.nextScreen)
